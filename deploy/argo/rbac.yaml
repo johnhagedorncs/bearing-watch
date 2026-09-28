@@ -1,0 +1,50 @@
+# Service account and the minimum permissions the workflow pods actually need.
+#
+# Argo's controller needs broad rights; the WORKLOAD does not. These pods read
+# data, write a run folder, and exit. They do not create workflows, read
+# secrets, or list pods, so they are not granted any of that.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bearing-watch
+  labels:
+    app.kubernetes.io/name: bearing-watch
+  annotations:
+    # IRSA: the pod assumes an IAM role rather than carrying a long-lived key.
+    # A static access key in a secret is a credential that cannot be rotated
+    # without a deployment and that survives in every backup of that namespace.
+    eks.amazonaws.com/role-arn: "arn:aws:iam::000000000000:role/bearing-watch-artifacts"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: bearing-watch-workflow
+  labels:
+    app.kubernetes.io/name: bearing-watch
+rules:
+  # Argo executors report step status by patching the pod they run in.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "patch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  # Required for the Argo workflow controller to record task results.
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflowtaskresults"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bearing-watch-workflow
+  labels:
+    app.kubernetes.io/name: bearing-watch
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bearing-watch-workflow
+subjects:
+  - kind: ServiceAccount
+    name: bearing-watch

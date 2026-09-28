@@ -1,0 +1,50 @@
+# Serving and monitoring configuration.
+
+serve:
+  host: 0.0.0.0
+  port: 8000
+  # Run folder the API loads at startup. Overridden by the BEARINGWATCH_RUN_DIR
+  # environment variable, which is how the container is pointed at a model.
+  # Inference always loads a RUN FOLDER by path. It never loads a loose model
+  # file, because a loose model file has no config, no scaler and no provenance,
+  # and pairing the wrong scaler with the right weights produces plausible
+  # numbers rather than an error.
+  run_dir: null
+  # Artifact store URI. file:// or s3://bucket/prefix
+  artifact_store_uri: "file://runs"
+  max_batch: 64
+  request_timeout_s: 30
+
+tracking:
+  # MLflow is optional. If it is not installed or the URI is null, tracking is
+  # skipped and the run folder is still complete -- the run folder is the source
+  # of truth, MLflow is a convenience index over it.
+  enabled: true
+  tracking_uri: null          # e.g. http://localhost:5000, or null for ./mlruns
+  experiment_name: bearing-watch
+
+monitor:
+  # Evidently is optional. A built-in KS + PSI implementation always runs, so
+  # drift numbers exist with or without it.
+  evidently_enabled: true
+  # Population Stability Index thresholds. 0.1 is the conventional "investigate"
+  # line and 0.25 the conventional "distributions have moved" line.
+  psi_warn: 0.10
+  psi_alert: 0.25
+  # Kolmogorov-Smirnov p-value below which a feature counts as drifted.
+  ks_alpha: 0.01
+  # Fraction of monitored features that must be drifted for the monitor to fire.
+  drifted_feature_fraction: 0.30
+  # Sliding window of snapshots compared against the training reference.
+  window_size: 20
+
+  band_split:
+    # Discriminant separating a broadband sensor gain change from real
+    # mechanical degradation. A multiplicative gain g scales every band energy
+    # by g^2, so band-energy RATIOS are invariant under gain change but move
+    # under degradation, which does not scale bands uniformly.
+    enabled: true
+    # Robust z on total in-band energy: "something changed".
+    level_z_threshold: 3.5
+    # Robust z on the band-ratio vector: "the SHAPE of the spectrum changed".
+    shape_z_threshold: 3.5

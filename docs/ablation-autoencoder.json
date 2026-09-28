@@ -1,0 +1,49 @@
+{
+  "model": "autoencoder",
+  "rows": [
+    {
+      "variant": "full",
+      "cache_key": "d5fb6424c69f1914",
+      "n_features": 67,
+      "fired": true,
+      "onset_index": 202,
+      "detect_rate": 0.5267857142857143,
+      "healthy_fp": 0.0,
+      "separation": 11.084332885993291,
+      "max_z": 3268.9392354085057
+    },
+    {
+      "variant": "no_kurtosis",
+      "cache_key": "1fc00a2c777fd182",
+      "n_features": 63,
+      "fired": true,
+      "onset_index": 195,
+      "detect_rate": 0.5580357142857143,
+      "healthy_fp": 0.0,
+      "separation": 10.577799822193615,
+      "max_z": 4604.017112502642
+    },
+    {
+      "variant": "no_defect_bands",
+      "cache_key": "c8a49ce6a22db6ef",
+      "n_features": 55,
+      "fired": true,
+      "onset_index": 195,
+      "detect_rate": 0.5580357142857143,
+      "healthy_fp": 0.0,
+      "separation": 12.870685561078695,
+      "max_z": 5133.904082939024
+    },
+    {
+      "variant": "neither",
+      "cache_key": "01a6989c06464118",
+      "n_features": 51,
+      "fired": true,
+      "onset_index": 202,
+      "detect_rate": 0.5267857142857143,
+      "healthy_fp": 0.0,
+      "separation": 13.047558097564247,
+      "max_z": 3162.070955397721
+    }
+  ]
+}

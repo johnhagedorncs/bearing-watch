@@ -1,0 +1,49 @@
+# Dataset layout and acquisition parameters.
+#
+# These describe the NASA IMS bearing dataset (Center for Intelligent Maintenance
+# Systems, University of Cincinnati; distributed through the NASA Prognostics Data
+# Repository). Four double-row bearings on one shaft, constant 2000 RPM under a
+# 6000 lb radial load, run to failure.
+#
+# Every file is one snapshot: 20,480 points sampled at 20 kHz (one second of
+# signal), recorded every 10 minutes. Files are ASCII, tab-separated, one column
+# per channel, no header row. The filename is the timestamp.
+
+data:
+  # Directory holding the per-snapshot ASCII files for one set.
+  root: data/raw/set2
+  # Snapshot shape contract. Enforced on every single read by the preflight gate
+  # and by the parser itself -- a short file is a corrupt file, not a warning.
+  expected_points: 20480
+  sample_rate_hz: 20000
+  # Filename timestamp format, e.g. 2004.02.12.10.32.39
+  filename_timestamp_format: "%Y.%m.%d.%H.%M.%S"
+  snapshot_interval_minutes: 10
+
+  # Which set is being read. Channel counts differ between sets, so this is not
+  # cosmetic -- it is part of the shape contract.
+  #   set1: 2156 files, 8 channels (two accelerometers per bearing).
+  #         Ends in inner-race failure on bearing 3 and roller-element failure
+  #         on bearing 4.
+  #   set2:  984 files, 4 channels. Outer-race failure on bearing 1.
+  #   set3: 6324 files, 4 channels. Outer-race failure on bearing 3.
+  set_name: set2
+  expected_channels: 4
+  # Optional: expected file count for the preflight density check. null disables
+  # the exact-count assertion but keeps the min_files check.
+  expected_files: null
+  min_files: 50
+
+  # Which channel index (0-based) carries the bearing under study. For set 2 the
+  # failure is on bearing 1, which is channel 0.
+  target_channel: 0
+
+  # Fraction of the (chronologically sorted) run treated as the declared healthy
+  # window. This is the training set AND the stationary reference period for the
+  # detector threshold. Declared here, in config, before any results.
+  healthy_fraction: 0.30
+
+  # Preflight tolerance: the fraction of snapshot intervals allowed to deviate
+  # from snapshot_interval_minutes before the density gate fails. Real IMS runs
+  # have gaps; a run that is mostly gaps is not a run.
+  max_interval_gap_fraction: 0.25

@@ -1,0 +1,58 @@
+# Detection configuration.
+#
+# The single most important line in this file is reference: healthy_window.
+#
+# A robust z-score needs a median and a MAD. The tempting choice is to compute
+# them from the series you are scoring. That choice is wrong in a way that does
+# not announce itself: if the series is a monotone ramp, the self-referencing
+# MAD scales with the ramp, and max|z| is pinned at approximately 1.349
+# regardless of how large the ramp is. The detector then cannot fire on ANY
+# progressive degradation, at any magnitude, ever -- and it looks like it is
+# working, because it still fires on spikes. The companion project tsad-harness
+# derives and demonstrates that result.
+#
+# So the reference statistics come from a DECLARED STATIONARY PERIOD -- the
+# healthy window fixed in configs/data.yaml before any results were looked at.
+
+detect:
+  # healthy_window | self  ("self" exists only so the failure mode can be
+  # demonstrated in a test; it is never the right production setting)
+  reference: healthy_window
+
+  # Fraction of the healthy window held out from MODEL FITTING and used only to
+  # calibrate the threshold.
+  #
+  # This is the second half of the reference-period argument and it is just as
+  # easy to get wrong. Even with a correctly declared stationary window, if the
+  # median and MAD are computed from the SAME snapshots the model was fitted on,
+  # they describe in-sample residuals. A reconstruction model always fits its
+  # own training data better than unseen data, so those residuals are
+  # optimistically low, the threshold derived from them is too tight, and the
+  # detector fires on healthy data it simply has not seen before.
+  #
+  # Measured here: PCA calibrated in-sample fired 3 snapshots after the healthy
+  # window ended -- 29 snapshots before degradation actually began -- for a 22.7%
+  # false-positive rate on genuinely healthy data. The model was not detecting a
+  # bearing; it was detecting "not my training set".
+  #
+  # Set to 0 to calibrate in-sample and reproduce that failure.
+  calibration_fraction: 0.25
+
+  # Robust z-score threshold. 3.5 on a MAD-based z is roughly the 4-sigma
+  # equivalent for gaussian data (MAD * 1.4826 = sigma).
+  z_threshold: 3.5
+  mad_scale: 1.4826
+  # Guard against a degenerate MAD of exactly zero on a quantised signal.
+  min_mad: 1.0e-09
+
+  # Persistence: a single snapshot over threshold is not an onset. Require
+  # `consecutive` snapshots inside a rolling window of `window` to be over.
+  persistence:
+    window: 5
+    consecutive: 3
+
+  # Lead time is reported as a RANGE, not a number. For a ramp-shaped event the
+  # apparent onset date moves with the baseline window used to define "normal",
+  # so a single lead-time figure is an artifact of one arbitrary choice. These
+  # are the healthy-window fractions swept to produce the range.
+  lead_time_baseline_fractions: [0.15, 0.20, 0.25, 0.30, 0.40, 0.50]

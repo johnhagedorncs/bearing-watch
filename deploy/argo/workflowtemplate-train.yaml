@@ -1,0 +1,110 @@
+# WorkflowTemplate for the training step.
+#
+# Training is its OWN template, separate from scoring, because they are separate
+# concerns operationally: different schedules, different resource requests,
+# different retry policies, and different failure consequences. A failed scoring
+# pass means one missing datapoint. A failed training run means the model that
+# will be served for the next month is wrong.
+#
+# The template is REFERENCED by name from the CronWorkflow and from any ad-hoc
+# submission, never inlined. Inlining a workflow body into the thing that
+# schedules it means the scheduled version and the manually-run version drift
+# apart, and the one that drifts is always the one nobody looks at.
+
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: bearing-watch-train
+  labels:
+    app.kubernetes.io/name: bearing-watch
+    app.kubernetes.io/component: train
+spec:
+  entrypoint: train
+  serviceAccountName: bearing-watch
+
+  # Fail rather than hang. A training pod stuck on a network mount will
+  # otherwise hold its resources until someone notices.
+  activeDeadlineSeconds: 7200
+
+  podMetadata:
+    labels:
+      app.kubernetes.io/name: bearing-watch
+      app.kubernetes.io/component: train
+
+  arguments:
+    parameters:
+      - name: data-uri
+        value: "s3://bearing-watch-data/set2"
+      - name: artifact-store-uri
+        value: "s3://bearing-watch-artifacts/runs"
+      - name: model-kind
+        value: "pca"
+      - name: image
+        value: "bearing-watch:0.1.0"
+      - name: config-overrides
+        value: ""
+
+  templates:
+    - name: train
+      inputs:
+        parameters:
+          - name: data-uri
+          - name: artifact-store-uri
+          - name: model-kind
+          - name: image
+          - name: config-overrides
+      # Retry only on transient failures. A config error or a failed preflight
+      # gate will fail identically on every attempt, and retrying it three times
+      # just delays the alert by three timeouts.
+      retryStrategy:
+        limit: "2"
+        retryPolicy: "OnTransientError"
+        backoff:
+          duration: "1m"
+          factor: "2"
+          maxDuration: "10m"
+      container:
+        image: "{{inputs.parameters.image}}"
+        command: ["bearingwatch"]
+        args:
+          - "train"
+          - "--data"
+          - "/data"
+          - "--model"
+          - "{{inputs.parameters.model-kind}}"
+          - "--runs-root"
+          - "/runs"
+        env:
+          - name: BEARINGWATCH_CFG__serve__artifact_store_uri
+            value: "{{inputs.parameters.artifact-store-uri}}"
+          - name: BEARINGWATCH_CFG__tracking__tracking_uri
+            value: "http://mlflow.bearing-watch.svc.cluster.local:5000"
+          - name: AWS_REGION
+            value: "us-east-1"
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+        volumeMounts:
+          - name: data
+            mountPath: /data
+            readOnly: true
+          - name: runs
+            mountPath: /runs
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 10001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: bearing-watch-data
+        - name: runs
+          persistentVolumeClaim:
+            claimName: bearing-watch-runs

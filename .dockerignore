@@ -1,0 +1,44 @@
+# Keep the build context small and free of anything that could leak into an
+# image layer.
+
+.git/
+.github/
+
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Datasets and generated artifacts never belong in an image. The run folder a
+# container serves is MOUNTED, so that the image and the model version are
+# independent: rolling a new model must not require rebuilding the image, and
+# an image must not silently carry a model somebody baked in months ago.
+.cache/
+data/
+runs/
+mlruns/
+monitoring/
+
+# Not needed at build time
+docs/
+tests/
+scripts/
+deploy/
+Makefile
+docker-compose.yml
+*.md
+!README.md
+
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,49 @@
+{
+  "model": "pca",
+  "rows": [
+    {
+      "variant": "full",
+      "cache_key": "d5fb6424c69f1914",
+      "n_features": 67,
+      "fired": true,
+      "onset_index": 205,
+      "detect_rate": 0.5089285714285714,
+      "healthy_fp": 0.0,
+      "separation": 12.598570476848765,
+      "max_z": 2037.9149207549353
+    },
+    {
+      "variant": "no_kurtosis",
+      "cache_key": "1fc00a2c777fd182",
+      "n_features": 63,
+      "fired": true,
+      "onset_index": 213,
+      "detect_rate": 0.47767857142857145,
+      "healthy_fp": 0.0,
+      "separation": 15.531159394970135,
+      "max_z": 1680.0269855911695
+    },
+    {
+      "variant": "no_defect_bands",
+      "cache_key": "c8a49ce6a22db6ef",
+      "n_features": 55,
+      "fired": true,
+      "onset_index": 211,
+      "detect_rate": 0.48660714285714285,
+      "healthy_fp": 0.0,
+      "separation": 10.87903915587342,
+      "max_z": 1572.7362799903526
+    },
+    {
+      "variant": "neither",
+      "cache_key": "01a6989c06464118",
+      "n_features": 51,
+      "fired": true,
+      "onset_index": 218,
+      "detect_rate": 0.45535714285714285,
+      "healthy_fp": 0.0,
+      "separation": 11.373592936148647,
+      "max_z": 1398.2881387367643
+    }
+  ]
+}

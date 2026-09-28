@@ -1,0 +1,96 @@
+# Everything a reviewer needs, in one command:
+#
+#     make demo          # generate data, train, then: docker compose up
+#     docker compose up
+#
+# Brings up the scoring API, an MLflow tracking server, and a monitoring
+# sidecar that recomputes drift on a schedule. The point of shipping this file
+# is that trying the project should cost a reviewer one command, not a page of
+# setup they have to get right before anything works.
+
+name: bearing-watch
+
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    image: bearing-watch:local
+    container_name: bearing-watch-api
+    ports:
+      - "8000:8000"
+    environment:
+      # Point at a run folder produced by `bearingwatch train`. If this is
+      # empty the service still starts and reports /ready false, which is the
+      # intended behaviour -- see the note in serve/app.py.
+      BEARINGWATCH_RUN_DIR: ${BEARINGWATCH_RUN_DIR:-}
+      BEARINGWATCH_RUNS_ROOT: /app/runs
+      BEARINGWATCH_CFG__tracking__tracking_uri: http://mlflow:5000
+    volumes:
+      # Read-only: the serving container has no business writing to the
+      # artifacts it serves.
+      - ./runs:/app/runs:ro
+      - ./data:/app/data:ro
+    depends_on:
+      mlflow:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.16.2
+    container_name: bearing-watch-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      MLFLOW_BACKEND_STORE_URI: sqlite:////mlflow/mlflow.db
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: /mlflow/artifacts
+    volumes:
+      - mlflow-data:/mlflow
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+    restart: unless-stopped
+
+  monitor:
+    build:
+      context: .
+      target: runtime
+    image: bearing-watch:local
+    container_name: bearing-watch-monitor
+    environment:
+      BEARINGWATCH_RUN_DIR: ${BEARINGWATCH_RUN_DIR:-}
+      BEARINGWATCH_RUNS_ROOT: /app/runs
+    volumes:
+      - ./runs:/app/runs:ro
+      - ./data:/app/data:ro
+      - ./monitoring:/app/monitoring
+    # Recompute drift against the training reference on a loop. In a cluster
+    # this is the CronWorkflow in deploy/argo/, not a sleep loop -- see the
+    # README on why a container that schedules itself is the wrong shape for
+    # production even though it is the right shape for a demo.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          bearingwatch infer \
+            --runs-root /app/runs \
+            --data /app/data/raw/synthetic \
+            --out /app/monitoring/latest || echo "scoring pass failed"
+          sleep 300
+        done
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mlflow-data:

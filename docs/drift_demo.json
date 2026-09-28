@@ -1,0 +1,98 @@
+{
+  "band_split": {
+    "degraded": {
+      "explanation": "MECHANICAL CHANGE: spectral shape moved (z=37.01), which a broadband gain change cannot produce. Level z=14.48. Bands driving it: ch0__band33_2985_3548Hz (z=37.0), ch0__band34_3548_4217Hz (z=35.7), ch0__band06_28_33Hz (z=-12.2)",
+      "implied_gain": 1.324722,
+      "level_fired": true,
+      "level_shift_log10": 0.24425,
+      "level_z": 14.4794,
+      "n_bands": 40,
+      "shape_fired": true,
+      "shape_z": 37.0068,
+      "top_shape_bands": [
+        [
+          "ch0__band33_2985_3548Hz",
+          37.0068
+        ],
+        [
+          "ch0__band34_3548_4217Hz",
+          35.6534
+        ],
+        [
+          "ch0__band06_28_33Hz",
+          -12.169
+        ],
+        [
+          "ch0__band32_2512_2985Hz",
+          11.4479
+        ],
+        [
+          "ch0__band07_33_40Hz",
+          -9.3991
+        ]
+      ],
+      "verdict": "mechanical_change"
+    },
+    "gain": {
+      "explanation": "broadband GAIN CHANGE: level moved (z=30.27) but spectral shape did not (z=0.00). Implied gain 1.800x. A multiplicative gain scales every band equally, so the shape is invariant -- consistent with an instrumentation change, not a bearing.",
+      "implied_gain": 1.8,
+      "level_fired": true,
+      "level_shift_log10": 0.510545,
+      "level_z": 30.2658,
+      "n_bands": 40,
+      "shape_fired": false,
+      "shape_z": 0.0,
+      "top_shape_bands": [
+        [
+          "ch0__band38_7079_8414Hz",
+          0.0
+        ],
+        [
+          "ch0__band37_5957_7079Hz",
+          0.0
+        ],
+        [
+          "ch0__band36_5012_5957Hz",
+          0.0
+        ],
+        [
+          "ch0__band39_8414_10000Hz",
+          0.0
+        ],
+        [
+          "ch0__band35_4217_5012Hz",
+          0.0
+        ]
+      ],
+      "verdict": "gain_change"
+    },
+    "injected_gain": 1.8,
+    "recovered_gain": 1.7999999999999343
+  },
+  "degradation": {
+    "detector_onset": 202,
+    "drift_fired_at": 115,
+    "drifted_fraction": 0.35,
+    "fired_before_degradation_began": true,
+    "lead_hours": 34.0,
+    "mean_psi": 0.229658,
+    "onset_minus_truth": -13
+  },
+  "degraded_window": {
+    "drifted_fraction": 0.95,
+    "fired": true,
+    "mean_psi": 6.640824657799238
+  },
+  "gain": 1.8,
+  "gain_change": {
+    "drifted_fraction": 1.0,
+    "fired": true,
+    "mean_psi": 12.091083680017558
+  },
+  "healthy_window": {
+    "n": 96,
+    "n_monitored_features": 40
+  },
+  "n_snapshots": 320,
+  "run_id": "20260828T201454Z-ab2c4e1c"
+}

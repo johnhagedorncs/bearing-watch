@@ -1,0 +1,54 @@
+{
+  "data_root": "data/raw/synthetic",
+  "feature_cache_key": "d5fb6424c69f1914",
+  "n_features": 67,
+  "n_healthy": 96,
+  "n_snapshots": 320,
+  "rows": [
+    {
+      "detect_rate": 0.5267857142857143,
+      "fired": true,
+      "healthy_fp": 0.0,
+      "healthy_max_z": 1.3240222332589575,
+      "lead_max_h": 38.833,
+      "lead_min_h": 20.667,
+      "max_z": 3268.9392354085057,
+      "model": "autoencoder",
+      "onset_index": 202,
+      "onset_minus_truth": 74,
+      "separation": 11.084332885993291,
+      "truth_detect": 0.6145833333333334,
+      "truth_fp": 0.0
+    },
+    {
+      "detect_rate": 0.5089285714285714,
+      "fired": true,
+      "healthy_fp": 0.0,
+      "healthy_max_z": 2.2042111464117644,
+      "lead_max_h": 40.833,
+      "lead_min_h": 40.667,
+      "max_z": 2037.9149207549353,
+      "model": "pca",
+      "onset_index": 205,
+      "onset_minus_truth": 77,
+      "separation": 12.598570476848765,
+      "truth_detect": 0.59375,
+      "truth_fp": 0.0
+    },
+    {
+      "detect_rate": 0.3482142857142857,
+      "fired": true,
+      "healthy_fp": 0.0,
+      "healthy_max_z": 5.2773156787436495,
+      "lead_max_h": 12.667,
+      "lead_min_h": 12.5,
+      "max_z": 78.56967227982007,
+      "model": "kurtosis",
+      "onset_index": 242,
+      "onset_minus_truth": 114,
+      "separation": 1.3891320066903046,
+      "truth_detect": 0.40625,
+      "truth_fp": 0.0
+    }
+  ]
+}

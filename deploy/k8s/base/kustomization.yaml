@@ -1,0 +1,29 @@
+# Base: what is true in every environment.
+#
+# The CronWorkflow is included here but ships SUSPENDED (see
+# ../../argo/cronworkflow-score.yaml). Enabling it is a per-environment decision
+# made by the enable-cron component, so a cluster that syncs this base without
+# opting in gets the definition and no scheduled execution.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: bearing-watch
+
+resources:
+  - namespace.yaml
+  - ../../argo/rbac.yaml
+  - ../../argo/workflowtemplate-train.yaml
+  - ../../argo/workflowtemplate-score.yaml
+  - ../../argo/cronworkflow-score.yaml
+  - pvc.yaml
+  - deployment-api.yaml
+  - service-api.yaml
+
+commonLabels:
+  app.kubernetes.io/name: bearing-watch
+  app.kubernetes.io/part-of: bearing-watch
+
+images:
+  - name: bearing-watch
+    newTag: 0.1.0

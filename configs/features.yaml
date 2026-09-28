@@ -1,0 +1,90 @@
+# Feature extraction configuration.
+#
+# IMPORTANT: this whole block is hashed to form the feature-cache key. Every
+# parameter that can change the output of feature extraction must live here and
+# nowhere else. If a parameter influences the numbers but is not in this file,
+# the cache will silently hand back stale features computed under the old value.
+# See src/bearingwatch/data/cache.py and tests/test_cache_key.py.
+
+features:
+  # Feature-schema version. Bump this by hand whenever the *code* that computes
+  # features changes in a way the config cannot express. The config hash cannot
+  # see code edits, so this is the manual escape hatch.
+  schema_version: 3
+
+  # "target" computes the full feature set on data.target_channel and only a
+  # couple of context stats on the other channels. "all" computes everything on
+  # every channel -- on set 1 (8 channels) that is roughly 550 features against
+  # a few hundred healthy snapshots, which is not a ratio worth defending.
+  channels: target
+  context_stats: [rms, kurtosis]
+
+  time_domain:
+    enabled: true
+    # rms, peak, peak_to_peak, crest_factor, kurtosis, skewness,
+    # shape_factor, impulse_factor
+    stats:
+      - rms
+      - peak
+      - peak_to_peak
+      - crest_factor
+      - kurtosis
+      - skewness
+      - shape_factor
+      - impulse_factor
+
+  spectral:
+    enabled: true
+    # Welch PSD parameters.
+    nperseg: 4096
+    noverlap: 2048
+    window: hann
+    detrend: constant
+    # The PSD is reduced to log-spaced band energies. 32-64 bands is the useful
+    # range: fewer and defect harmonics smear together, more and each band is
+    # noise-dominated at this record length.
+    n_bands: 40
+    f_min_hz: 10.0
+    f_max_hz: 10000.0
+    # Band energies are stored as log10(energy + eps); raw energies span many
+    # decades and would otherwise dominate the scaler.
+    log_energy: true
+    log_eps: 1.0e-18
+
+  defect_bands:
+    enabled: true
+    # Energy in a narrow band around each bearing defect frequency and its
+    # harmonics. Widths are relative to the centre frequency.
+    harmonics: 3
+    rel_bandwidth: 0.02      # +/- 2% of the centre frequency
+    min_bandwidth_hz: 5.0    # floor, so FTF at ~15 Hz still gets a usable band
+    log_energy: true
+    # Normalise each defect-band energy by the total in-band spectral energy.
+    # This is what makes the defect features invariant to a broadband gain
+    # change -- see src/bearingwatch/monitor/band_split.py.
+    normalise_by_total: true
+
+  # --------------------------------------------------------------------------
+  # Bearing geometry for the defect-frequency formulas.
+  #
+  # VERIFY THESE AGAINST THE DATASET DOCUMENTATION BEFORE TRUSTING ANY NUMBER
+  # THAT DEPENDS ON THEM. These are the commonly cited values for the Rexnord
+  # ZA-2115 double-row bearings used in the IMS test rig, but bearing geometry
+  # tables get copied between papers without being rechecked, and a wrong pitch
+  # diameter moves every defect frequency without ever raising an error. The
+  # readme sanity check: at 2000 RPM these should come out near
+  # BPFO 236 Hz, BPFI 297 Hz, BSF 140 Hz, FTF 15 Hz.
+  # --------------------------------------------------------------------------
+  bearing:
+    name: "Rexnord ZA-2115 (double row) -- VERIFY AGAINST DATASET DOCS"
+    n_rolling_elements: 16      # per row
+    ball_diameter_in: 0.331
+    pitch_diameter_in: 2.815
+    contact_angle_deg: 15.17
+    shaft_rpm: 2000
+
+  # Ablation switches. Flipping either of these changes the cache key, so an
+  # ablation run cannot accidentally read the full-feature cache.
+  ablation:
+    drop_kurtosis: false
+    drop_defect_bands: false

@@ -1,0 +1,144 @@
+# WorkflowTemplate for the scoring step.
+#
+# Separate from training, and deliberately so. `bearingwatch infer` takes a run
+# folder path and shares no state with `bearingwatch train`, which is what makes
+# these two independent steps rather than two halves of one script. That
+# separation is the reason this file can exist at all.
+#
+# Note the run-id parameter has NO default that resolves to "latest". A
+# scheduled job that resolves "the newest model" at runtime changes what it is
+# doing without anyone deploying anything, and the change is invisible until the
+# results move. The run id is pinned by the caller, which means changing the
+# served model is a git commit.
+
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: bearing-watch-score
+  labels:
+    app.kubernetes.io/name: bearing-watch
+    app.kubernetes.io/component: score
+spec:
+  entrypoint: score
+  serviceAccountName: bearing-watch
+  activeDeadlineSeconds: 3600
+
+  podMetadata:
+    labels:
+      app.kubernetes.io/name: bearing-watch
+      app.kubernetes.io/component: score
+
+  arguments:
+    parameters:
+      - name: run-id
+        # No default. An unset run id must fail the submission, not silently
+        # pick something.
+        value: ""
+      - name: data-uri
+        value: "s3://bearing-watch-data/set2"
+      - name: image
+        value: "bearing-watch:0.1.0"
+
+  templates:
+    - name: score
+      inputs:
+        parameters:
+          - name: run-id
+          - name: data-uri
+          - name: image
+      steps:
+        - - name: preflight
+            template: preflight
+            arguments:
+              parameters:
+                - name: image
+                  value: "{{inputs.parameters.image}}"
+        - - name: infer
+            template: infer
+            arguments:
+              parameters:
+                - name: run-id
+                  value: "{{inputs.parameters.run-id}}"
+                - name: image
+                  value: "{{inputs.parameters.image}}"
+
+    # Preflight is its own step so a data problem fails BEFORE any compute is
+    # spent, and fails with its own name in the workflow graph. A gate buried
+    # inside the scoring step shows up as "scoring failed", which sends whoever
+    # is on call to the wrong place.
+    - name: preflight
+      inputs:
+        parameters:
+          - name: image
+      container:
+        image: "{{inputs.parameters.image}}"
+        command: ["bearingwatch"]
+        args: ["preflight", "--data", "/data"]
+        resources:
+          requests: { cpu: "250m", memory: "512Mi" }
+          limits: { cpu: "1", memory: "1Gi" }
+        volumeMounts:
+          - name: data
+            mountPath: /data
+            readOnly: true
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 10001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: bearing-watch-data
+
+    - name: infer
+      inputs:
+        parameters:
+          - name: run-id
+          - name: image
+      retryStrategy:
+        limit: "3"
+        retryPolicy: "OnTransientError"
+        backoff:
+          duration: "30s"
+          factor: "2"
+          maxDuration: "5m"
+      container:
+        image: "{{inputs.parameters.image}}"
+        command: ["bearingwatch"]
+        args:
+          - "infer"
+          - "--run"
+          - "/runs/{{inputs.parameters.run-id}}"
+          - "--data"
+          - "/data"
+          - "--out"
+          - "/runs/{{inputs.parameters.run-id}}/inference/{{workflow.name}}"
+        env:
+          - name: AWS_REGION
+            value: "us-east-1"
+        resources:
+          requests: { cpu: "1", memory: "2Gi" }
+          limits: { cpu: "2", memory: "4Gi" }
+        volumeMounts:
+          - name: data
+            mountPath: /data
+            readOnly: true
+          - name: runs
+            mountPath: /runs
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 10001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: bearing-watch-data
+        - name: runs
+          persistentVolumeClaim:
+            claimName: bearing-watch-runs

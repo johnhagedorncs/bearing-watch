@@ -1,0 +1,45 @@
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Test and type-checker caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Feature cache. Content-addressed and cheap to rebuild; never a source of truth.
+.cache/
+
+# Datasets. The IMS dataset is gigabytes and the synthetic data regenerates
+# deterministically from a seed, so neither belongs in git.
+data/
+!data/.gitkeep
+
+# Run folders. Each one holds a model, a scaler and its provenance -- artifacts,
+# not source. The .gitkeep preserves the directory so `bearingwatch train`
+# has somewhere to write on a clean clone.
+runs/*
+!runs/.gitkeep
+
+# Local MLflow store and monitoring output
+mlruns/
+monitoring/
+*.db
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store

@@ -1,0 +1,57 @@
+# Model configuration.
+#
+# All three models are trained on the SAME healthy window and scored the same
+# way, so the comparison table in docs/RESULTS.md is apples to apples.
+
+model:
+  # autoencoder | pca | kurtosis
+  kind: autoencoder
+
+  # Standardise features using statistics from the healthy window only.
+  # The fitted scaler is saved into the run folder. Features written to the
+  # feature cache are ALWAYS unscaled and carry scaled=false in their parquet
+  # metadata; the scoring path asserts on that flag before transforming.
+  # See src/bearingwatch/features/pipeline.py and tests/test_double_scaling.py.
+  standardise: true
+
+  autoencoder:
+    # Sizes are the encoder hidden widths; the decoder mirrors them.
+    hidden_dims: [64, 32]
+    latent_dim: 8
+    dropout: 0.0
+    activation: relu
+    epochs: 200
+    batch_size: 32
+    learning_rate: 0.001
+    weight_decay: 1.0e-05
+    # Fraction of the healthy window held out to early-stop on. This is a
+    # random split within the healthy window, not a chronological one -- the
+    # healthy window is stationary by declaration, so shuffling inside it is
+    # legitimate. The chronological discipline is that nothing after the
+    # healthy window is visible to training at all.
+    val_fraction: 0.2
+    patience: 25
+    seed: 0
+
+  pca:
+    # Number of components kept for the reconstruction-error baseline. If
+    # n_components is a float in (0, 1) it is read as explained-variance ratio.
+    n_components: 0.95
+    seed: 0
+    # Minimum healthy snapshots required per retained component.
+    #
+    # This is not a tuning knob, it is a correctness guard. PCA with k
+    # components reconstructs n samples exactly once k >= n-1. Asking for 95%
+    # explained variance on a short healthy window gets you almost as many
+    # components as there are snapshots, the training residuals collapse to
+    # near zero, and the threshold built from them fires on everything that is
+    # not the training set -- measured at a 17-23% false-positive rate on data
+    # that was still healthy. Requiring 3 samples per component also happens to
+    # be roughly what a stable covariance estimate needs.
+    max_sample_ratio: 3.0
+
+  kurtosis:
+    # The dumbest useful baseline: excess kurtosis of the target channel, which
+    # rises when a bearing starts producing impulsive contact. No training at
+    # all beyond reading the healthy window to set a reference.
+    feature_name: "ch0__kurtosis"

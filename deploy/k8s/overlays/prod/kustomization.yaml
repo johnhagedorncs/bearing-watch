@@ -1,0 +1,43 @@
+# Prod: schedule enabled, three replicas, a pinned image digest.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: bearing-watch-prod
+nameSuffix: -prod
+
+resources:
+  - ../../base
+
+components:
+  - ../../components/enable-cron
+
+replicas:
+  - name: bearing-watch-api
+    count: 3
+
+images:
+  # Pinned by DIGEST, not by tag. A tag is a mutable pointer: `:0.1.0` can be
+  # repushed, and then a rolling restart serves different code with no change to
+  # any manifest and nothing in git to show for it.
+  - name: bearing-watch
+    newName: ghcr.io/example/bearing-watch
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+
+patches:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: bearing-watch-api
+    patch: |-
+      - op: add
+        path: /spec/template/spec/topologySpreadConstraints
+        value:
+          - maxSkew: 1
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: ScheduleAnyway
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: bearing-watch
+                app.kubernetes.io/component: api

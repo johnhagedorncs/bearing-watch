@@ -1,0 +1,24 @@
+# Data is read-many: every scoring pod reads the same snapshots.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bearing-watch-data
+spec:
+  accessModes: ["ReadOnlyMany"]
+  resources:
+    requests:
+      storage: 50Gi
+---
+# Run folders are written by training and read by scoring and serving, so this
+# one has to be ReadWriteMany. In a real cluster the run folders would live in
+# S3 (see the artifact store) and this PVC would only be scratch space; it is
+# here so the manifests are runnable without an S3 bucket.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bearing-watch-runs
+spec:
+  accessModes: ["ReadWriteMany"]
+  resources:
+    requests:
+      storage: 10Gi

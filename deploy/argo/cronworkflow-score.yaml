@@ -1,0 +1,61 @@
+# Scheduled scoring.
+#
+# SUSPENDED BY DEFAULT, in the base. This is the single most important line in
+# the file and it is not a placeholder.
+#
+# A CronWorkflow that is active the moment it is applied will start running as
+# soon as it lands in any cluster it is synced to -- including a fresh
+# environment where the data mount is wrong, the model does not exist, or
+# someone was testing a kustomize build. The failure is not that it errors; it
+# is that it runs, silently, against something, and writes results that look
+# real. Suspended-in-base means running is an explicit per-environment decision:
+# the dev and prod overlays enable it via the enable-cron component, and a
+# cluster nobody deliberately enabled stays quiet.
+#
+# It also has NO ad-hoc submission path, which is a feature rather than a
+# limitation. The workflow body lives in a WorkflowTemplate referenced by name,
+# so the only ways to run it are the schedule and an explicit
+# `argo submit --from workflowtemplate/bearing-watch-score` with parameters
+# supplied on purpose. There is no "just run it quickly with my local settings"
+# route that produces artifacts indistinguishable from scheduled ones. Every
+# result in the artifact store came from a pinned template, a pinned image and a
+# pinned run id, which is what makes an old result explainable six weeks later.
+
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: bearing-watch-score-nightly
+  labels:
+    app.kubernetes.io/name: bearing-watch
+    app.kubernetes.io/component: score
+spec:
+  # Enabled per-environment by deploy/k8s/components/enable-cron.
+  suspend: true
+
+  schedule: "0 2 * * *"
+  timezone: "UTC"
+  concurrencyPolicy: "Forbid"
+  # If the controller was down, do not stampede. Run at most one catch-up pass.
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 10
+
+  workflowSpec:
+    # REFERENCED, never inlined. The scheduled path and the manual path execute
+    # the same bytes, so they cannot drift apart.
+    workflowTemplateRef:
+      name: bearing-watch-score
+    entrypoint: score
+    serviceAccountName: bearing-watch
+    ttlStrategy:
+      secondsAfterCompletion: 604800  # keep a week of history for debugging
+    arguments:
+      parameters:
+        - name: run-id
+          # Pinned. Changing the served model is a commit to this file, which
+          # means it goes through review and shows up in git blame.
+          value: "PIN-ME-TO-A-RUN-ID"
+        - name: data-uri
+          value: "s3://bearing-watch-data/set2"
+        - name: image
+          value: "bearing-watch:0.1.0"

@@ -1,0 +1,46 @@
+# Dev: schedule enabled, small resources, one replica, synthetic data.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: bearing-watch-dev
+nameSuffix: -dev
+
+resources:
+  - ../../base
+
+components:
+  # Explicit opt-in. Removing this line stops the schedule; nothing else changes.
+  - ../../components/enable-cron
+
+replicas:
+  - name: bearing-watch-api
+    count: 1
+
+images:
+  - name: bearing-watch
+    newTag: dev
+
+patches:
+  # Run more often in dev so a change is observable within a working day.
+  - target:
+      group: argoproj.io
+      version: v1alpha1
+      kind: CronWorkflow
+      name: bearing-watch-score-nightly
+    patch: |-
+      - op: replace
+        path: /spec/schedule
+        value: "0 */4 * * *"
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: bearing-watch-api
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "100m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "256Mi"
